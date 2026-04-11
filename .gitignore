@@ -1,0 +1,71 @@
+# Unity generated folders
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+MemoryCaptures/
+Recordings/
+
+# Unity crash log
+crash.log
+*.stacktrace
+
+# Asset store plugin cache
+/[Aa]sset [Ss]tore-5.x/
+
+# NOTE: .meta files MUST be tracked — do not add *.meta here
+# Unity uses .meta files to store GUIDs and import settings
+
+# Visual Studio / Rider / VS Code
+.vs/
+.idea/
+*.csproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+
+# Rider
+.idea/
+
+# OS generated
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Build artifacts
+*.apk
+*.aab
+*.unitypackage
+*.app
+*.exe
+*.x86
+*.x86_64
+*.dll
+
+# IL2CPP
+Il2CppOutputProject/
+
+# Packages — restored on demand, do not commit
+# (keep Packages/manifest.json and Packages/packages-lock.json tracked)
+/[Pp]ackages/*/
+!/[Pp]ackages/manifest.json
+!/[Pp]ackages/packages-lock.json
