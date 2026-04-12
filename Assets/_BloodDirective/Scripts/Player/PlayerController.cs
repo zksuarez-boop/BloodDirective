@@ -1,9 +1,11 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace BloodDirective.Player
 {
     /// <summary>
     /// Handles player input for click-to-move navigation and attack targeting.
+    /// Uses Unity's new Input System — Mouse.current for button state and cursor position.
     /// Requires a <see cref="PlayerCharacter"/> on the same GameObject.
     /// </summary>
     [RequireComponent(typeof(PlayerCharacter))]
@@ -39,9 +41,10 @@ namespace BloodDirective.Player
 
         private void HandleMovementInput()
         {
-            if (!Input.GetMouseButtonDown(0)) return;
+            if (Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame) return;
 
-            Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
+            Vector2 screenPos = Mouse.current.position.ReadValue();
+            Ray ray = _mainCamera.ScreenPointToRay(screenPos);
             if (!Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, _groundLayer)) return;
 
             _character.MoveTo(hit.point);
@@ -50,9 +53,10 @@ namespace BloodDirective.Player
 
         private void HandleAttackInput()
         {
-            if (!Input.GetMouseButtonDown(1)) return;
+            if (Mouse.current == null || !Mouse.current.rightButton.wasPressedThisFrame) return;
 
-            Ray ray = _mainCamera.ScreenPointToRay(Input.mousePosition);
+            Vector2 screenPos = Mouse.current.position.ReadValue();
+            Ray ray = _mainCamera.ScreenPointToRay(screenPos);
             if (!Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, _enemyLayer)) return;
 
             // TODO: Attack system — move into attack range and trigger combat
