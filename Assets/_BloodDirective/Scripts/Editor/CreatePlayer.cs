@@ -102,6 +102,7 @@ public static class CreatePlayer
         agent.radius          = 0.4f;
         agent.height          = 2f;
         agent.baseOffset      = 0f;
+        agent.enabled         = false; // baker re-enables after NavMesh is baked at runtime
         agent.speed           = 5f;
         agent.angularSpeed    = 360f;
         agent.acceleration    = 16f;

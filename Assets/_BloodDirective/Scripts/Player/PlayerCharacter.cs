@@ -95,7 +95,17 @@ namespace BloodDirective.Player
             _stats           = _characterData.CreateStatSheet();
             _currentHealth   = _stats.MaxHealth;
             _currentResource = _characterData.MaxResource;
-            _agent.speed     = _characterData.BaseMoveSpeed * _stats.MoveSpeedMultiplier;
+
+            // Agent may be disabled at startup until NavMeshRuntimeBaker re-enables it.
+            if (_agent != null && _agent.isActiveAndEnabled)
+                _agent.speed = _characterData.BaseMoveSpeed * _stats.MoveSpeedMultiplier;
+        }
+
+        /// <summary>Called by NavMeshRuntimeBaker after the NavMesh is ready.</summary>
+        public void OnNavMeshReady()
+        {
+            if (_agent != null && _characterData != null && _stats != null)
+                _agent.speed = _characterData.BaseMoveSpeed * _stats.MoveSpeedMultiplier;
         }
 
         // ── Movement ──────────────────────────────────────────────────────────
