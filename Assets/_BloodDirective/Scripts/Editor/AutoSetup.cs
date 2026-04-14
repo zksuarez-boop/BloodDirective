@@ -9,6 +9,7 @@ using BloodDirective.Systems;
 using BloodDirective.Data;
 using BloodDirective.Enemies;
 using BloodDirective.Stats;
+using BloodDirective.UI;
 
 /// <summary>
 /// Automatically configures the scene every time you enter Play mode.
@@ -106,52 +107,59 @@ public static class AutoSetup
             }
         }
 
-        // ── 8. Spawn enemy if none in scene ───────────────────────────────────
-        var existingEnemy = Object.FindFirstObjectByType<EnemyCharacter>();
-        if (existingEnemy == null)
-        {
-            SpawnEnemy(ground, enemyLayer);
-        }
-        else
-        {
-            // Fix layer and snap Y directly — no raycast needed
-            if (existingEnemy.gameObject.layer != enemyLayer)
-                existingEnemy.gameObject.layer = enemyLayer;
+        // ── 8. Destroy all existing enemies and respawn clean wave ────────────
+        foreach (var e in Object.FindObjectsByType<EnemyCharacter>())
+            Undo.DestroyObjectImmediate(e.gameObject);
 
-            float groundY = ground.transform.position.y + 0.01f;
-            var ePos = existingEnemy.transform.position;
-            if (Mathf.Abs(ePos.y - groundY) > 0.05f)
-            {
-                Undo.RecordObject(existingEnemy.transform, "AutoSetup: Fix Enemy Y");
-                existingEnemy.transform.position = new Vector3(ePos.x, groundY, ePos.z);
-            }
-            Debug.Log($"[AutoSetup] Found existing enemy '{existingEnemy.gameObject.name}' at Y={existingEnemy.transform.position.y:F3}");
-        }
+        float groundSurfaceY = ground.transform.position.y + 0.01f;
+        var enemyData = AssetDatabase.LoadAssetAtPath<EnemyData>(EnemyAssetPath);
 
-        // ── 9. Save ───────────────────────────────────────────────────────────
+        var spawnPositions = new Vector3[]
+        {
+            new Vector3( 6f, groundSurfaceY,  0f),
+            new Vector3( 9f, groundSurfaceY,  4f),
+            new Vector3( 9f, groundSurfaceY, -4f),
+        };
+
+        foreach (var pos in spawnPositions)
+            SpawnEnemy(pos, enemyLayer, enemyData);
+
+        // ── 9. Ensure EnemySpawner exists and is configured ───────────────────
+        var spawner = Object.FindFirstObjectByType<EnemySpawner>();
+        if (spawner == null)
+        {
+            var spawnerGO = new GameObject("EnemySpawner");
+            Undo.RegisterCreatedObjectUndo(spawnerGO, "AutoSetup: Create EnemySpawner");
+            spawner = spawnerGO.AddComponent<EnemySpawner>();
+        }
+        spawner.Configure(enemyData, spawnPositions);
+        EditorUtility.SetDirty(spawner);
+
+        // ── 10. Ensure PlayerHUD is on the player ─────────────────────────────
+        if (player.GetComponent<PlayerHUD>() == null)
+            player.AddComponent<PlayerHUD>();
+
+        // ── 11. Save ──────────────────────────────────────────────────────────
         EditorSceneManager.SaveOpenScenes();
-        Debug.Log("[AutoSetup] Done — entering Play. Left-click to move, right-click enemy to attack.");
+        Debug.Log("[AutoSetup] Done — 3 enemies spawned. Left-click enemy to attack, left-click ground to move.");
     }
 
     // ── Enemy ─────────────────────────────────────────────────────────────────
 
-    private static void SpawnEnemy(GameObject ground, int enemyLayer)
+    private static void SpawnEnemy(Vector3 position, int enemyLayer, EnemyData enemyData)
     {
-        var enemyData = AssetDatabase.LoadAssetAtPath<EnemyData>(EnemyAssetPath);
         if (enemyData == null)
         {
             Debug.LogWarning("[AutoSetup] BasicEnemy.asset missing — enemy not spawned.");
             return;
         }
 
-        // Root at ground level, 6 units in front of player
-        float surfaceY = ground.transform.position.y;
         var enemy = new GameObject("Enemy");
         Undo.RegisterCreatedObjectUndo(enemy, "AutoSetup: Create Enemy");
         enemy.layer = enemyLayer;
-        enemy.transform.position = new Vector3(6f, surfaceY + 0.01f, 0f);
+        enemy.transform.position = position;
 
-        // Red capsule (visual only — no collider needed, raycast hits parent)
+        // Red capsule visual — no collider (parent handles it)
         var capsule = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         capsule.name = "Mesh";
         capsule.layer = enemyLayer;
@@ -161,32 +169,34 @@ public static class AutoSetup
         capsule.transform.localScale    = Vector3.one;
         Object.DestroyImmediate(capsule.GetComponent<CapsuleCollider>());
 
-        // Red material
-        var renderer = capsule.GetComponent<Renderer>();
-        if (renderer != null)
-        {
-            var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            mat.color = new Color(0.75f, 0.1f, 0.1f);
-            renderer.sharedMaterial = mat;
-        }
+        var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        mat.color = new Color(0.75f, 0.1f, 0.1f);
+        capsule.GetComponent<Renderer>().sharedMaterial = mat;
 
-        // Capsule collider on root so raycasts hit the enemy (not the visual mesh)
-        var col = enemy.AddComponent<CapsuleCollider>();
+        // Collider on root for raycasts
+        var col    = enemy.AddComponent<CapsuleCollider>();
         col.center = new Vector3(0f, 1f, 0f);
         col.radius = 0.5f;
         col.height = 2f;
 
-        // EnemyCharacter — assign the data asset
+        // NavMeshAgent — baker disables/re-enables on Play
+        var agent          = enemy.AddComponent<NavMeshAgent>();
+        agent.radius       = 0.4f;
+        agent.height       = 2f;
+        agent.speed        = enemyData.MoveSpeed;
+        agent.angularSpeed = 360f;
+        agent.acceleration = 8f;
+
+        // EnemyCharacter — assign data asset via SerializedObject
         var ec   = enemy.AddComponent<EnemyCharacter>();
         var ecSo = new SerializedObject(ec);
         ecSo.FindProperty("_enemyData").objectReferenceValue = enemyData;
         ecSo.ApplyModifiedProperties();
         EditorUtility.SetDirty(ec);
 
-        // Floating health bar
+        // Floating health bar + AI
         enemy.AddComponent<EnemyHealthBar>();
-
-        Debug.Log($"[AutoSetup] Enemy spawned at Y={surfaceY + 0.01f:F3}. Left-click it to attack.");
+        enemy.AddComponent<EnemyAI>();
     }
 
     private static void EnsureEnemyAsset()

@@ -42,6 +42,9 @@ namespace BloodDirective.Player
         /// <summary>Fired when the character's health reaches zero.</summary>
         public Action OnDeath;
 
+        /// <summary>Fired whenever XP changes, passing (currentXP, xpToNextLevel).</summary>
+        public Action<float, float> OnXPChanged;
+
         // ── Public Getters ────────────────────────────────────────────────────
 
         /// <summary>Current health points.</summary>
@@ -67,6 +70,9 @@ namespace BloodDirective.Player
 
         /// <summary>XP threshold required to reach the next level.</summary>
         public float XPToNextLevel => _xpToNextLevel;
+
+        /// <summary>True while the character is alive.</summary>
+        public bool IsAlive => _currentHealth > 0f;
 
         /// <summary>The active StatSheet holding all six stats and derived values.</summary>
         public StatSheet Stats => _stats;
@@ -188,6 +194,7 @@ namespace BloodDirective.Player
                 _currentXP -= _xpToNextLevel;
                 LevelUp();
             }
+            OnXPChanged?.Invoke(_currentXP, _xpToNextLevel);
         }
 
         private void LevelUp()

@@ -50,6 +50,14 @@ namespace BloodDirective.Enemies
                 _currentHealth = _enemyData.MaxHealth;
         }
 
+        /// <summary>Initializes this enemy with the given data asset. Use when spawning at runtime.</summary>
+        public void Initialize(EnemyData data)
+        {
+            _enemyData     = data;
+            _currentHealth = data.MaxHealth;
+            _isDead        = false;
+        }
+
         // ── Damage ────────────────────────────────────────────────────────────
 
         /// <summary>
