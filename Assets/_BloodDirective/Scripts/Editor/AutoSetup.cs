@@ -254,12 +254,13 @@ public static class AutoSetup
             Debug.LogWarning("[AutoSetup] GreenBeret.asset not found — assign CharacterData manually in Inspector.");
         }
 
+        int groundLayer = LayerMask.NameToLayer("Ground");
+
         var ctrlSo = new SerializedObject(controller);
         ctrlSo.FindProperty("_groundLayer").intValue = 1 << groundLayer;
         ctrlSo.FindProperty("_enemyLayer").intValue  = 1 << enemyLayer;
         ctrlSo.ApplyModifiedProperties();
 
-        int groundLayer = LayerMask.NameToLayer("Ground");
         SnapToGround(player, 1 << groundLayer);
 
         Debug.Log("[AutoSetup] Player created.");
