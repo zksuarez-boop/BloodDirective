@@ -45,6 +45,8 @@ namespace BloodDirective.Player
 
         /// <summary>
         /// Left-click: attack if cursor is over an enemy, otherwise move to ground.
+        /// Casts against all layers and checks for EnemyCharacter component directly,
+        /// so layer mask misconfiguration can never silently block combat.
         /// </summary>
         private void HandleLeftClick()
         {
@@ -53,30 +55,20 @@ namespace BloodDirective.Player
             Vector2 screenPos = Mouse.current.position.ReadValue();
             Ray ray = _mainCamera.ScreenPointToRay(screenPos);
 
-            // Enemy hit — attack
-            if (Physics.Raycast(ray, out RaycastHit enemyHit, Mathf.Infinity, _enemyLayer))
+            if (!Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity)) return;
+
+            // If we hit something with an EnemyCharacter — attack it
+            if (hit.collider.TryGetComponent<EnemyCharacter>(out var enemy))
             {
-                Debug.Log($"[PlayerController] Ray hit '{enemyHit.collider.gameObject.name}' on layer {enemyHit.collider.gameObject.layer}");
-                if (enemyHit.collider.TryGetComponent<EnemyCharacter>(out var enemy))
-                {
-                    Debug.Log($"[PlayerController] SetTarget called on {enemy.gameObject.name}");
+                if (!enemy.IsDead)
                     _combat.SetTarget(enemy);
-                    return;
-                }
-                Debug.LogWarning($"[PlayerController] Hit object has no EnemyCharacter component");
-            }
-            else
-            {
-                Debug.Log($"[PlayerController] Enemy raycast missed (enemyLayer mask={_enemyLayer.value})");
+                return;
             }
 
-            // Ground hit — move
-            if (Physics.Raycast(ray, out RaycastHit groundHit, Mathf.Infinity, _groundLayer))
-            {
-                _combat.ClearTarget();
-                _character.MoveTo(groundHit.point);
-                ShowClickIndicator(groundHit.point);
-            }
+            // Otherwise treat the click as ground movement
+            _combat.ClearTarget();
+            _character.MoveTo(hit.point);
+            ShowClickIndicator(hit.point);
         }
 
         // ── Click Indicator ───────────────────────────────────────────────────
