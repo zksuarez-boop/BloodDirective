@@ -104,6 +104,7 @@ namespace BloodDirective.Player
         /// <param name="destination">Target world-space position.</param>
         public void MoveTo(Vector3 destination)
         {
+            if (_agent == null || !_agent.isOnNavMesh) return;
             _agent.SetDestination(destination);
         }
 

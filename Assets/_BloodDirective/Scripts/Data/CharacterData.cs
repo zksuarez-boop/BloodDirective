@@ -59,9 +59,11 @@ namespace BloodDirective.Data
         // ── Movement ──────────────────────────────────────────────────────────
 
         [Header("Movement")]
-        [SerializeField] private float _baseMoveSpeed   = 5f;
-        [SerializeField] private float _baseAttackRange = 2f;
-        [SerializeField] private float _baseAttackSpeed = 1f;
+        [SerializeField] private float      _baseMoveSpeed       = 5f;
+        [SerializeField] private float      _baseAttackRange     = 2f;
+        [SerializeField] private float      _baseAttackSpeed     = 1f;
+        [SerializeField] private float      _baseWeaponDamage    = 10f;
+        [SerializeField] private DamageType _defaultDamageType   = DamageType.Solid;
 
         // ── Identity Getters ──────────────────────────────────────────────────
 
@@ -143,6 +145,12 @@ namespace BloodDirective.Data
 
         /// <summary>Base number of attacks per second.</summary>
         public float BaseAttackSpeed => _baseAttackSpeed;
+
+        /// <summary>Flat damage value before stat multipliers are applied.</summary>
+        public float BaseWeaponDamage => _baseWeaponDamage;
+
+        /// <summary>Damage type used by this class's basic attacks.</summary>
+        public DamageType DefaultDamageType => _defaultDamageType;
 
         // ── Methods ───────────────────────────────────────────────────────────
 

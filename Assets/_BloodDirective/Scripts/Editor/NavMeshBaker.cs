@@ -8,12 +8,17 @@ public class NavMeshBaker
     public static void BakeNavMesh()
     {
         NavMeshSurface surface = Object.FindObjectOfType<NavMeshSurface>();
+
         if (surface == null)
         {
-            Debug.LogError("No NavMeshSurface found in scene!");
-            return;
+            Debug.Log("[NavMeshBaker] No NavMeshSurface found — creating one automatically.");
+            var go = new GameObject("NavMeshSurface");
+            surface = go.AddComponent<NavMeshSurface>();
+            Undo.RegisterCreatedObjectUndo(go, "Create NavMeshSurface");
         }
+
         surface.BuildNavMesh();
-        Debug.Log("NavMesh baked successfully!");
+        EditorUtility.SetDirty(surface);
+        Debug.Log("[NavMeshBaker] NavMesh baked successfully!");
     }
 }

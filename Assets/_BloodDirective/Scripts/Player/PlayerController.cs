@@ -1,14 +1,17 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using BloodDirective.Combat;
+using BloodDirective.Enemies;
 
 namespace BloodDirective.Player
 {
     /// <summary>
     /// Handles player input for click-to-move navigation and attack targeting.
     /// Uses Unity's new Input System — Mouse.current for button state and cursor position.
-    /// Requires a <see cref="PlayerCharacter"/> on the same GameObject.
+    /// Requires a <see cref="PlayerCharacter"/> and <see cref="CombatController"/> on the same GameObject.
     /// </summary>
     [RequireComponent(typeof(PlayerCharacter))]
+    [RequireComponent(typeof(CombatController))]
     public class PlayerController : MonoBehaviour
     {
         // ── Serialized ────────────────────────────────────────────────────────
@@ -19,16 +22,18 @@ namespace BloodDirective.Player
 
         // ── Private ───────────────────────────────────────────────────────────
 
-        private PlayerCharacter _character;
-        private Camera          _mainCamera;
-        private GameObject      _activeIndicator;
+        private PlayerCharacter  _character;
+        private CombatController _combat;
+        private Camera           _mainCamera;
+        private GameObject       _activeIndicator;
 
         // ── Unity Lifecycle ───────────────────────────────────────────────────
 
         private void Start()
         {
-            _character   = GetComponent<PlayerCharacter>();
-            _mainCamera  = Camera.main;
+            _character  = GetComponent<PlayerCharacter>();
+            _combat     = GetComponent<CombatController>();
+            _mainCamera = Camera.main;
         }
 
         private void Update()
@@ -47,6 +52,7 @@ namespace BloodDirective.Player
             Ray ray = _mainCamera.ScreenPointToRay(screenPos);
             if (!Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, _groundLayer)) return;
 
+            _combat.ClearTarget();
             _character.MoveTo(hit.point);
             ShowClickIndicator(hit.point);
         }
@@ -59,8 +65,9 @@ namespace BloodDirective.Player
             Ray ray = _mainCamera.ScreenPointToRay(screenPos);
             if (!Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, _enemyLayer)) return;
 
-            // TODO: Attack system — move into attack range and trigger combat
-            _character.MoveTo(hit.point);
+            if (!hit.collider.TryGetComponent<EnemyCharacter>(out var enemy)) return;
+
+            _combat.SetTarget(enemy);
         }
 
         // ── Click Indicator ───────────────────────────────────────────────────
