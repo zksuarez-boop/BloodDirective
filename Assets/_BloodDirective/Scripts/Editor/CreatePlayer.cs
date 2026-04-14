@@ -70,7 +70,7 @@ public static class CreatePlayer
 
         // ── 3. Delete any existing player ────────────────────────────────────
 
-        var existing = Object.FindObjectOfType<PlayerCharacter>();
+        var existing = Object.FindFirstObjectByType<PlayerCharacter>();
         if (existing != null)
         {
             Debug.Log($"[CreatePlayer] Removing existing player: '{existing.gameObject.name}'");
@@ -139,7 +139,7 @@ public static class CreatePlayer
 
         // ── 7. Wire camera ────────────────────────────────────────────────────
 
-        var cam = Object.FindObjectOfType<CameraController>();
+        var cam = Object.FindFirstObjectByType<CameraController>();
         if (cam != null)
         {
             var camSo = new SerializedObject(cam);
@@ -166,13 +166,13 @@ public static class CreatePlayer
     private static GameObject FindGround()
     {
         // Priority: object named exactly "Ground" or "Plane", then anything with a mesh
-        foreach (var go in Object.FindObjectsOfType<GameObject>())
+        foreach (var go in Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None))
         {
             string n = go.name.ToLower();
             if ((n == "ground" || n == "plane") && go.GetComponent<MeshRenderer>() != null)
                 return go;
         }
-        foreach (var go in Object.FindObjectsOfType<GameObject>())
+        foreach (var go in Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None))
         {
             string n = go.name.ToLower();
             if ((n.Contains("ground") || n.Contains("plane")) && go.GetComponent<MeshRenderer>() != null)

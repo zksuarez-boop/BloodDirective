@@ -7,7 +7,7 @@ public class NavMeshBaker
     [MenuItem("BloodDirective/Bake NavMesh")]
     public static void BakeNavMesh()
     {
-        NavMeshSurface surface = Object.FindObjectOfType<NavMeshSurface>();
+        NavMeshSurface surface = Object.FindFirstObjectByType<NavMeshSurface>();
 
         if (surface == null)
         {

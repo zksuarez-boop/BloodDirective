@@ -20,7 +20,7 @@ public static class PlayerSetup
 
         // ── Step 1: Report NavMesh state ──────────────────────────────────────
 
-        var surfaces = Object.FindObjectsOfType<NavMeshSurface>();
+        var surfaces = Object.FindObjectsByType<NavMeshSurface>(FindObjectsSortMode.None);
         Debug.Log($"[PlayerSetup] NavMeshSurface components in scene: {surfaces.Length}");
         foreach (var s in surfaces)
             Debug.Log($"  - '{s.gameObject.name}' navMeshData={(s.navMeshData != null ? "EXISTS" : "NULL")}");
@@ -36,7 +36,7 @@ public static class PlayerSetup
         // ── Step 3: Rebuild NavMesh on the plane ──────────────────────────────
 
         // Remove any stale surfaces elsewhere
-        foreach (var s in Object.FindObjectsOfType<NavMeshSurface>())
+        foreach (var s in Object.FindObjectsByType<NavMeshSurface>(FindObjectsSortMode.None))
             if (s.gameObject != plane)
             {
                 Undo.DestroyObjectImmediate(s.gameObject.GetComponent<NavMeshSurface>() != null
@@ -57,7 +57,7 @@ public static class PlayerSetup
 
         // ── Step 4: Delete old Player, create fresh one ───────────────────────
 
-        var existing = Object.FindObjectOfType<PlayerCharacter>();
+        var existing = Object.FindFirstObjectByType<PlayerCharacter>();
         if (existing != null)
         {
             Debug.Log($"[PlayerSetup] Deleting existing player: '{existing.gameObject.name}'");
@@ -110,7 +110,7 @@ public static class PlayerSetup
 
         // ── Step 5: Wire camera ───────────────────────────────────────────────
 
-        var cam = Object.FindObjectOfType<CameraController>();
+        var cam = Object.FindFirstObjectByType<CameraController>();
         if (cam != null)
         {
             SerializedObject camSo  = new SerializedObject(cam);
@@ -136,7 +136,7 @@ public static class PlayerSetup
     private static GameObject FindOrCreatePlane()
     {
         // Check by name
-        foreach (var go in Object.FindObjectsOfType<GameObject>())
+        foreach (var go in Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None))
         {
             string n = go.name.ToLower();
             if ((n == "ground" || n == "plane" || n.Contains("ground") || n.Contains("plane"))

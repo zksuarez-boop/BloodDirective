@@ -74,7 +74,7 @@ public static class SceneSetup
         // The most common cause of "no valid NavMesh" is the player spawning
         // too far above the surface for the agent to auto-snap.
 
-        var playerCharacter = Object.FindObjectOfType<BloodDirective.Player.PlayerCharacter>();
+        var playerCharacter = Object.FindFirstObjectByType<BloodDirective.Player.PlayerCharacter>();
         if (playerCharacter != null)
         {
             GameObject playerGO = playerCharacter.gameObject;
@@ -103,7 +103,7 @@ public static class SceneSetup
 
         // ── 5. PlayerController layer masks ───────────────────────────────────
 
-        var controller = Object.FindObjectOfType<BloodDirective.Player.PlayerController>();
+        var controller = Object.FindFirstObjectByType<BloodDirective.Player.PlayerController>();
         if (controller != null)
         {
             SerializedObject so = new SerializedObject(controller);
@@ -121,7 +121,7 @@ public static class SceneSetup
 
         // ── 6. CameraController target ────────────────────────────────────────
 
-        var cam = Object.FindObjectOfType<BloodDirective.Systems.CameraController>();
+        var cam = Object.FindFirstObjectByType<BloodDirective.Systems.CameraController>();
         if (cam != null && playerCharacter != null)
         {
             SerializedObject so     = new SerializedObject(cam);
@@ -170,11 +170,11 @@ public static class SceneSetup
     {
         int groundLayer = LayerMask.NameToLayer(GroundLayerName);
 
-        foreach (GameObject go in Object.FindObjectsOfType<GameObject>())
+        foreach (GameObject go in Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None))
             if (go.layer == groundLayer && go.GetComponent<MeshRenderer>() != null)
                 return go;
 
-        foreach (GameObject go in Object.FindObjectsOfType<GameObject>())
+        foreach (GameObject go in Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None))
         {
             string n = go.name.ToLower();
             if ((n.Contains("ground") || n.Contains("plane")) && go.GetComponent<MeshRenderer>() != null)
