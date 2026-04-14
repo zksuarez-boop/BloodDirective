@@ -114,9 +114,18 @@ public static class AutoSetup
         }
         else
         {
+            // Fix layer and snap Y directly — no raycast needed
             if (existingEnemy.gameObject.layer != enemyLayer)
                 existingEnemy.gameObject.layer = enemyLayer;
-            Debug.Log($"[AutoSetup] Found existing enemy: '{existingEnemy.gameObject.name}'");
+
+            float groundY = ground.transform.position.y + 0.01f;
+            var ePos = existingEnemy.transform.position;
+            if (Mathf.Abs(ePos.y - groundY) > 0.05f)
+            {
+                Undo.RecordObject(existingEnemy.transform, "AutoSetup: Fix Enemy Y");
+                existingEnemy.transform.position = new Vector3(ePos.x, groundY, ePos.z);
+            }
+            Debug.Log($"[AutoSetup] Found existing enemy '{existingEnemy.gameObject.name}' at Y={existingEnemy.transform.position.y:F3}");
         }
 
         // ── 9. Save ───────────────────────────────────────────────────────────
@@ -177,11 +186,7 @@ public static class AutoSetup
         // Floating health bar
         enemy.AddComponent<EnemyHealthBar>();
 
-        // Snap using ground-only mask so the ray doesn't hit the enemy's own CapsuleCollider
-        int groundLayer = LayerMask.NameToLayer("Ground");
-        SnapToGround(enemy, 1 << groundLayer);
-
-        Debug.Log("[AutoSetup] Enemy spawned. Right-click it to attack.");
+        Debug.Log($"[AutoSetup] Enemy spawned at Y={surfaceY + 0.01f:F3}. Left-click it to attack.");
     }
 
     private static void EnsureEnemyAsset()
