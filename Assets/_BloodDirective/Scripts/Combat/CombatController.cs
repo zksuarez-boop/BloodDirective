@@ -116,7 +116,6 @@ namespace BloodDirective.Combat
             try
             {
                 float attackRange = _character.CharacterData.BaseAttackRange;
-                Debug.Log($"[CombatController] Loop started. Target={_currentTarget.gameObject.name}, range={attackRange}, isOnNavMesh={_agent.isOnNavMesh}");
 
                 // ── Phase 1: Approach ─────────────────────────────────────────
 
@@ -130,8 +129,6 @@ namespace BloodDirective.Combat
                         _agent.SetDestination(_currentTarget.transform.position);
                     await Awaitable.NextFrameAsync(ct);
                 }
-
-                Debug.Log($"[CombatController] In range — starting attack loop");
 
                 // Stop NavMesh movement before entering attack phase.
                 if (_agent.isOnNavMesh)
@@ -171,7 +168,6 @@ namespace BloodDirective.Combat
         {
             if (_currentTarget == null || _currentTarget.IsDead) return;
 
-            Debug.Log($"[CombatController] ExecuteAttack — CharData={_character.CharacterData != null}, Stats={_character.Stats != null}");
             float baseAmount  = _character.CharacterData.BaseWeaponDamage * _character.Stats.MeleeDamage;
             bool  isCrit      = UnityEngine.Random.value < _character.Stats.CritChance;
             float finalDamage = isCrit ? baseAmount * _character.Stats.CritDamage : baseAmount;

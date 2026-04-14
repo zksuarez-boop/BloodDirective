@@ -57,7 +57,7 @@ namespace BloodDirective.Player
 
             if (!Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity)) return;
 
-            // If we hit something with an EnemyCharacter — attack it
+            // Enemy hit — attack
             if (hit.collider.TryGetComponent<EnemyCharacter>(out var enemy))
             {
                 if (!enemy.IsDead)
