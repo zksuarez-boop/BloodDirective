@@ -38,36 +38,38 @@ namespace BloodDirective.Player
 
         private void Update()
         {
-            HandleMovementInput();
-            HandleAttackInput();
+            HandleLeftClick();
         }
 
         // ── Input Handlers ────────────────────────────────────────────────────
 
-        private void HandleMovementInput()
+        /// <summary>
+        /// Left-click: attack if cursor is over an enemy, otherwise move to ground.
+        /// </summary>
+        private void HandleLeftClick()
         {
             if (Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame) return;
 
             Vector2 screenPos = Mouse.current.position.ReadValue();
             Ray ray = _mainCamera.ScreenPointToRay(screenPos);
-            if (!Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, _groundLayer)) return;
 
-            _combat.ClearTarget();
-            _character.MoveTo(hit.point);
-            ShowClickIndicator(hit.point);
-        }
+            // Enemy hit — attack
+            if (Physics.Raycast(ray, out RaycastHit enemyHit, Mathf.Infinity, _enemyLayer))
+            {
+                if (enemyHit.collider.TryGetComponent<EnemyCharacter>(out var enemy))
+                {
+                    _combat.SetTarget(enemy);
+                    return;
+                }
+            }
 
-        private void HandleAttackInput()
-        {
-            if (Mouse.current == null || !Mouse.current.rightButton.wasPressedThisFrame) return;
-
-            Vector2 screenPos = Mouse.current.position.ReadValue();
-            Ray ray = _mainCamera.ScreenPointToRay(screenPos);
-            if (!Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, _enemyLayer)) return;
-
-            if (!hit.collider.TryGetComponent<EnemyCharacter>(out var enemy)) return;
-
-            _combat.SetTarget(enemy);
+            // Ground hit — move
+            if (Physics.Raycast(ray, out RaycastHit groundHit, Mathf.Infinity, _groundLayer))
+            {
+                _combat.ClearTarget();
+                _character.MoveTo(groundHit.point);
+                ShowClickIndicator(groundHit.point);
+            }
         }
 
         // ── Click Indicator ───────────────────────────────────────────────────
