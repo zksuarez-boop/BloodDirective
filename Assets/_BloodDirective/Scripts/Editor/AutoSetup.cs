@@ -81,8 +81,6 @@ public static class AutoSetup
             player = BuildPlayer(ground, groundLayer, enemyLayer);
         }
 
-        SnapToGround(player, ground);
-
         // ── 6. Wire player layer masks ────────────────────────────────────────
         var ctrl = player.GetComponent<PlayerController>();
         if (ctrl != null)
@@ -142,7 +140,7 @@ public static class AutoSetup
         var enemy = new GameObject("Enemy");
         Undo.RegisterCreatedObjectUndo(enemy, "AutoSetup: Create Enemy");
         enemy.layer = enemyLayer;
-        enemy.transform.position = new Vector3(6f, surfaceY, 0f);
+        enemy.transform.position = new Vector3(6f, surfaceY + 0.01f, 0f);
 
         // Red capsule (visual only — no collider needed, raycast hits parent)
         var capsule = GameObject.CreatePrimitive(PrimitiveType.Capsule);
@@ -179,7 +177,9 @@ public static class AutoSetup
         // Floating health bar
         enemy.AddComponent<EnemyHealthBar>();
 
-        SnapToGround(enemy, ground);
+        // Snap using ground-only mask so the ray doesn't hit the enemy's own CapsuleCollider
+        int groundLayer = LayerMask.NameToLayer("Ground");
+        SnapToGround(enemy, 1 << groundLayer);
 
         Debug.Log("[AutoSetup] Enemy spawned. Right-click it to attack.");
     }
@@ -259,16 +259,19 @@ public static class AutoSetup
         ctrlSo.FindProperty("_enemyLayer").intValue  = 1 << enemyLayer;
         ctrlSo.ApplyModifiedProperties();
 
+        int groundLayer = LayerMask.NameToLayer("Ground");
+        SnapToGround(player, 1 << groundLayer);
+
         Debug.Log("[AutoSetup] Player created.");
         return player;
     }
 
     // ── Shared Helpers ────────────────────────────────────────────────────────
 
-    private static void SnapToGround(GameObject go, GameObject ground)
+    private static void SnapToGround(GameObject go, int groundLayerMask)
     {
         Vector3 above = new Vector3(go.transform.position.x, 10f, go.transform.position.z);
-        if (Physics.Raycast(above, Vector3.down, out RaycastHit hit, 20f))
+        if (Physics.Raycast(above, Vector3.down, out RaycastHit hit, 20f, groundLayerMask))
         {
             Undo.RecordObject(go.transform, "AutoSetup: Snap to Ground");
             var pos = hit.point;

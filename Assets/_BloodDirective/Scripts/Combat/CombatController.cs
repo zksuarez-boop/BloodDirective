@@ -154,6 +154,10 @@ namespace BloodDirective.Combat
             {
                 // Expected — loop exits cleanly when ClearTarget or SetTarget(new) is called.
             }
+            catch (Exception e)
+            {
+                Debug.LogError($"[CombatController] Combat loop failed: {e}");
+            }
         }
 
         /// <summary>
