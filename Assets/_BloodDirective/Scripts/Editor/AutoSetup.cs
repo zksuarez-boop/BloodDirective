@@ -7,6 +7,8 @@ using BloodDirective.Player;
 using BloodDirective.Combat;
 using BloodDirective.Systems;
 using BloodDirective.Data;
+using BloodDirective.Enemies;
+using BloodDirective.Stats;
 
 /// <summary>
 /// Automatically configures the scene every time you enter Play mode.
@@ -15,14 +17,17 @@ using BloodDirective.Data;
 [InitializeOnLoad]
 public static class AutoSetup
 {
+    private const string EnemyAssetPath = "Assets/_BloodDirective/ScriptableObjects/Enemies/BasicEnemy.asset";
+
     static AutoSetup()
     {
         EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+        // Create the BasicEnemy data asset on first compile if it doesn't exist
+        EnsureEnemyAsset();
     }
 
     private static void OnPlayModeStateChanged(PlayModeStateChange state)
     {
-        // Run just before Unity enters Play mode
         if (state != PlayModeStateChange.ExitingEditMode) return;
 
         Debug.Log("[AutoSetup] Configuring scene before Play...");
@@ -76,10 +81,9 @@ public static class AutoSetup
             player = BuildPlayer(ground, groundLayer, enemyLayer);
         }
 
-        // Ensure player is on the NavMesh surface
-        SnapPlayerToGround(player, ground);
+        SnapToGround(player, ground);
 
-        // ── 6. Wire layer masks ───────────────────────────────────────────────
+        // ── 6. Wire player layer masks ────────────────────────────────────────
         var ctrl = player.GetComponent<PlayerController>();
         if (ctrl != null)
         {
@@ -91,7 +95,7 @@ public static class AutoSetup
         }
 
         // ── 7. Wire camera ────────────────────────────────────────────────────
-        var cam = Object.FindFirstObjectByType<BloodDirective.Systems.CameraController>();
+        var cam = Object.FindFirstObjectByType<CameraController>();
         if (cam != null)
         {
             var so   = new SerializedObject(cam);
@@ -104,24 +108,115 @@ public static class AutoSetup
             }
         }
 
-        // ── 8. Save ───────────────────────────────────────────────────────────
+        // ── 8. Spawn enemy if none in scene ───────────────────────────────────
+        var existingEnemy = Object.FindFirstObjectByType<EnemyCharacter>();
+        if (existingEnemy == null)
+        {
+            SpawnEnemy(ground, enemyLayer);
+        }
+        else
+        {
+            if (existingEnemy.gameObject.layer != enemyLayer)
+                existingEnemy.gameObject.layer = enemyLayer;
+            Debug.Log($"[AutoSetup] Found existing enemy: '{existingEnemy.gameObject.name}'");
+        }
+
+        // ── 9. Save ───────────────────────────────────────────────────────────
         EditorSceneManager.SaveOpenScenes();
-        Debug.Log("[AutoSetup] Done — entering Play.");
+        Debug.Log("[AutoSetup] Done — entering Play. Left-click to move, right-click enemy to attack.");
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // ── Enemy ─────────────────────────────────────────────────────────────────
+
+    private static void SpawnEnemy(GameObject ground, int enemyLayer)
+    {
+        var enemyData = AssetDatabase.LoadAssetAtPath<EnemyData>(EnemyAssetPath);
+        if (enemyData == null)
+        {
+            Debug.LogWarning("[AutoSetup] BasicEnemy.asset missing — enemy not spawned.");
+            return;
+        }
+
+        // Root at ground level, 6 units in front of player
+        float surfaceY = ground.transform.position.y;
+        var enemy = new GameObject("Enemy");
+        Undo.RegisterCreatedObjectUndo(enemy, "AutoSetup: Create Enemy");
+        enemy.layer = enemyLayer;
+        enemy.transform.position = new Vector3(6f, surfaceY, 0f);
+
+        // Red capsule (visual only — no collider needed, raycast hits parent)
+        var capsule = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+        capsule.name = "Mesh";
+        capsule.layer = enemyLayer;
+        capsule.transform.SetParent(enemy.transform);
+        capsule.transform.localPosition = new Vector3(0f, 1f, 0f);
+        capsule.transform.localRotation = Quaternion.identity;
+        capsule.transform.localScale    = Vector3.one;
+        Object.DestroyImmediate(capsule.GetComponent<CapsuleCollider>());
+
+        // Red material
+        var renderer = capsule.GetComponent<Renderer>();
+        if (renderer != null)
+        {
+            var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            mat.color = new Color(0.75f, 0.1f, 0.1f);
+            renderer.sharedMaterial = mat;
+        }
+
+        // Capsule collider on root so raycasts hit the enemy (not the visual mesh)
+        var col = enemy.AddComponent<CapsuleCollider>();
+        col.center = new Vector3(0f, 1f, 0f);
+        col.radius = 0.5f;
+        col.height = 2f;
+
+        // EnemyCharacter — assign the data asset
+        var ec   = enemy.AddComponent<EnemyCharacter>();
+        var ecSo = new SerializedObject(ec);
+        ecSo.FindProperty("_enemyData").objectReferenceValue = enemyData;
+        ecSo.ApplyModifiedProperties();
+        EditorUtility.SetDirty(ec);
+
+        // Floating health bar
+        enemy.AddComponent<EnemyHealthBar>();
+
+        SnapToGround(enemy, ground);
+
+        Debug.Log("[AutoSetup] Enemy spawned. Right-click it to attack.");
+    }
+
+    private static void EnsureEnemyAsset()
+    {
+        if (AssetDatabase.LoadAssetAtPath<EnemyData>(EnemyAssetPath) != null) return;
+
+        var asset = ScriptableObject.CreateInstance<EnemyData>();
+        // SerializedObject lets us write private [SerializeField] fields
+        var so = new SerializedObject(asset);
+        so.FindProperty("_enemyName")        .stringValue = "Grey Drone";
+        so.FindProperty("_maxHealth")        .floatValue  = 50f;
+        so.FindProperty("_baseAttackDamage") .floatValue  = 8f;
+        so.FindProperty("_baseAttackSpeed")  .floatValue  = 1f;
+        so.FindProperty("_baseAttackRange")  .floatValue  = 1.5f;
+        so.FindProperty("_baseWeaponDamage") .floatValue  = 10f;
+        so.FindProperty("_damageType")       .intValue    = (int)DamageType.Solid;
+        so.FindProperty("_xpReward")         .floatValue  = 25f;
+        so.FindProperty("_moveSpeed")        .floatValue  = 3f;
+        so.ApplyModifiedProperties();
+
+        AssetDatabase.CreateAsset(asset, EnemyAssetPath);
+        AssetDatabase.SaveAssets();
+        Debug.Log("[AutoSetup] Created BasicEnemy.asset (Grey Drone, 50 HP, 25 XP).");
+    }
+
+    // ── Player ────────────────────────────────────────────────────────────────
 
     private static GameObject BuildPlayer(GameObject ground, int groundLayer, int enemyLayer)
     {
         float surfaceY = ground.transform.position.y;
-        NavMesh.SamplePosition(ground.transform.position, out NavMeshHit hit, 10f, NavMesh.AllAreas);
-        // surfaceY from hit is only valid if there's an existing bake; runtime baker handles the rest
 
         var player = new GameObject("Player");
         Undo.RegisterCreatedObjectUndo(player, "AutoSetup: Create Player");
         player.transform.position = new Vector3(0f, surfaceY, 0f);
 
-        // Visual capsule (no collider — agent handles movement)
         var capsule = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         capsule.name = "Mesh";
         capsule.transform.SetParent(player.transform);
@@ -130,7 +225,6 @@ public static class AutoSetup
         capsule.transform.localScale    = Vector3.one;
         Object.DestroyImmediate(capsule.GetComponent<CapsuleCollider>());
 
-        // NavMeshAgent — starts disabled; NavMeshRuntimeBaker re-enables after bake
         var agent             = player.AddComponent<NavMeshAgent>();
         agent.radius          = 0.4f;
         agent.height          = 2f;
@@ -146,7 +240,6 @@ public static class AutoSetup
         player.AddComponent<CombatController>();
         var controller = player.AddComponent<PlayerController>();
 
-        // Assign GreenBeret CharacterData
         var greenBeret = AssetDatabase.LoadAssetAtPath<CharacterData>(
             "Assets/_BloodDirective/ScriptableObjects/Classes/GreenBeret.asset");
         if (greenBeret != null)
@@ -158,10 +251,9 @@ public static class AutoSetup
         }
         else
         {
-            Debug.LogWarning("[AutoSetup] GreenBeret.asset not found at Assets/_BloodDirective/ScriptableObjects/Classes/GreenBeret.asset — assign CharacterData manually.");
+            Debug.LogWarning("[AutoSetup] GreenBeret.asset not found — assign CharacterData manually in Inspector.");
         }
 
-        // Layer masks
         var ctrlSo = new SerializedObject(controller);
         ctrlSo.FindProperty("_groundLayer").intValue = 1 << groundLayer;
         ctrlSo.FindProperty("_enemyLayer").intValue  = 1 << enemyLayer;
@@ -171,15 +263,17 @@ public static class AutoSetup
         return player;
     }
 
-    private static void SnapPlayerToGround(GameObject player, GameObject ground)
+    // ── Shared Helpers ────────────────────────────────────────────────────────
+
+    private static void SnapToGround(GameObject go, GameObject ground)
     {
-        Vector3 above = new Vector3(player.transform.position.x, 10f, player.transform.position.z);
+        Vector3 above = new Vector3(go.transform.position.x, 10f, go.transform.position.z);
         if (Physics.Raycast(above, Vector3.down, out RaycastHit hit, 20f))
         {
+            Undo.RecordObject(go.transform, "AutoSetup: Snap to Ground");
             var pos = hit.point;
             pos.y += 0.01f;
-            Undo.RecordObject(player.transform, "AutoSetup: Snap Player");
-            player.transform.position = pos;
+            go.transform.position = pos;
         }
     }
 
