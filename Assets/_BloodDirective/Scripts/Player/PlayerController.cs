@@ -56,11 +56,18 @@ namespace BloodDirective.Player
             // Enemy hit — attack
             if (Physics.Raycast(ray, out RaycastHit enemyHit, Mathf.Infinity, _enemyLayer))
             {
+                Debug.Log($"[PlayerController] Ray hit '{enemyHit.collider.gameObject.name}' on layer {enemyHit.collider.gameObject.layer}");
                 if (enemyHit.collider.TryGetComponent<EnemyCharacter>(out var enemy))
                 {
+                    Debug.Log($"[PlayerController] SetTarget called on {enemy.gameObject.name}");
                     _combat.SetTarget(enemy);
                     return;
                 }
+                Debug.LogWarning($"[PlayerController] Hit object has no EnemyCharacter component");
+            }
+            else
+            {
+                Debug.Log($"[PlayerController] Enemy raycast missed (enemyLayer mask={_enemyLayer.value})");
             }
 
             // Ground hit — move
