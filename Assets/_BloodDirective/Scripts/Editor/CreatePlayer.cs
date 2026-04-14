@@ -55,18 +55,19 @@ public static class CreatePlayer
         surface.collectObjects = CollectObjects.All;
         surface.useGeometry    = NavMeshCollectGeometry.PhysicsColliders;
         surface.BuildNavMesh();
-
-        // Mark dirty and force-save so data persists into Play mode
         EditorUtility.SetDirty(surface);
-        if (surface.navMeshData != null)
-            EditorUtility.SetDirty(surface.navMeshData);
+
+        // Also add the runtime baker so the NavMesh is guaranteed to exist
+        // when agents initialize, regardless of editor bake persistence.
+        if (ground.GetComponent<BloodDirective.Systems.NavMeshRuntimeBaker>() == null)
+            ground.AddComponent<BloodDirective.Systems.NavMeshRuntimeBaker>();
 
         AssetDatabase.SaveAssets();
 
         bool bakeOk = NavMesh.SamplePosition(ground.transform.position, out NavMeshHit hit, 10f, NavMesh.AllAreas);
         Debug.Log(bakeOk
             ? $"[CreatePlayer] NavMesh bake OK — sample point: {hit.position}"
-            : "[CreatePlayer] WARNING: NavMesh.SamplePosition found nothing after bake.");
+            : "[CreatePlayer] NavMesh editor bake not verified — runtime baker will handle it on Play.");
 
         // ── 3. Delete any existing player ────────────────────────────────────
 
