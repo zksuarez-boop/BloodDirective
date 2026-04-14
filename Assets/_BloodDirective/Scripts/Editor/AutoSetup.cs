@@ -254,8 +254,6 @@ public static class AutoSetup
             Debug.LogWarning("[AutoSetup] GreenBeret.asset not found — assign CharacterData manually in Inspector.");
         }
 
-        int groundLayer = LayerMask.NameToLayer("Ground");
-
         var ctrlSo = new SerializedObject(controller);
         ctrlSo.FindProperty("_groundLayer").intValue = 1 << groundLayer;
         ctrlSo.FindProperty("_enemyLayer").intValue  = 1 << enemyLayer;
