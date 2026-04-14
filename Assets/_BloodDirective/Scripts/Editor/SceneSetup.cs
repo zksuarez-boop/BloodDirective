@@ -170,11 +170,11 @@ public static class SceneSetup
     {
         int groundLayer = LayerMask.NameToLayer(GroundLayerName);
 
-        foreach (GameObject go in Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None))
+        foreach (GameObject go in Object.FindObjectsByType<GameObject>())
             if (go.layer == groundLayer && go.GetComponent<MeshRenderer>() != null)
                 return go;
 
-        foreach (GameObject go in Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None))
+        foreach (GameObject go in Object.FindObjectsByType<GameObject>())
         {
             string n = go.name.ToLower();
             if ((n.Contains("ground") || n.Contains("plane")) && go.GetComponent<MeshRenderer>() != null)

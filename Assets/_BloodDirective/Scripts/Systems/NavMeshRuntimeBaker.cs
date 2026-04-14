@@ -18,7 +18,7 @@ namespace BloodDirective.Systems
         private void Awake()
         {
             // Step 1 — disable all agents so none try to attach before bake
-            var agents = FindObjectsByType<NavMeshAgent>(FindObjectsSortMode.None);
+            var agents = FindObjectsByType<NavMeshAgent>();
             foreach (var a in agents)
                 a.enabled = false;
 

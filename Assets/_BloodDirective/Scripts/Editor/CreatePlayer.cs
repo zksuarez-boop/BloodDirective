@@ -168,13 +168,13 @@ public static class CreatePlayer
     private static GameObject FindGround()
     {
         // Priority: object named exactly "Ground" or "Plane", then anything with a mesh
-        foreach (var go in Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None))
+        foreach (var go in Object.FindObjectsByType<GameObject>())
         {
             string n = go.name.ToLower();
             if ((n == "ground" || n == "plane") && go.GetComponent<MeshRenderer>() != null)
                 return go;
         }
-        foreach (var go in Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None))
+        foreach (var go in Object.FindObjectsByType<GameObject>())
         {
             string n = go.name.ToLower();
             if ((n.Contains("ground") || n.Contains("plane")) && go.GetComponent<MeshRenderer>() != null)

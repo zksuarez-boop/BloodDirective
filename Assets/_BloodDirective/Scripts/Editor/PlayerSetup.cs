@@ -20,7 +20,7 @@ public static class PlayerSetup
 
         // ── Step 1: Report NavMesh state ──────────────────────────────────────
 
-        var surfaces = Object.FindObjectsByType<NavMeshSurface>(FindObjectsSortMode.None);
+        var surfaces = Object.FindObjectsByType<NavMeshSurface>();
         Debug.Log($"[PlayerSetup] NavMeshSurface components in scene: {surfaces.Length}");
         foreach (var s in surfaces)
             Debug.Log($"  - '{s.gameObject.name}' navMeshData={(s.navMeshData != null ? "EXISTS" : "NULL")}");
@@ -36,7 +36,7 @@ public static class PlayerSetup
         // ── Step 3: Rebuild NavMesh on the plane ──────────────────────────────
 
         // Remove any stale surfaces elsewhere
-        foreach (var s in Object.FindObjectsByType<NavMeshSurface>(FindObjectsSortMode.None))
+        foreach (var s in Object.FindObjectsByType<NavMeshSurface>())
             if (s.gameObject != plane)
             {
                 Undo.DestroyObjectImmediate(s.gameObject.GetComponent<NavMeshSurface>() != null
@@ -136,7 +136,7 @@ public static class PlayerSetup
     private static GameObject FindOrCreatePlane()
     {
         // Check by name
-        foreach (var go in Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None))
+        foreach (var go in Object.FindObjectsByType<GameObject>())
         {
             string n = go.name.ToLower();
             if ((n == "ground" || n == "plane" || n.Contains("ground") || n.Contains("plane"))
