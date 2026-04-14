@@ -1,11 +1,14 @@
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.AI;
 using Unity.AI.Navigation;
 
 /// <summary>
 /// One-click scene setup for Blood Directive.
 /// Menu: BloodDirective/Setup Scene
 /// Handles layers, colliders, NavMesh, camera target, and PlayerController layer masks.
+/// Saves the scene automatically after baking so NavMesh data persists into Play mode.
 /// </summary>
 public static class SceneSetup
 {
@@ -15,8 +18,6 @@ public static class SceneSetup
     [MenuItem("BloodDirective/Setup Scene")]
     public static void SetupScene()
     {
-        bool dirty = false;
-
         // ── 1. Ensure layers exist ────────────────────────────────────────────
 
         int groundLayer = EnsureLayer(GroundLayerName);
@@ -37,37 +38,38 @@ public static class SceneSetup
             plane.name = "Ground";
             plane.transform.localScale = new Vector3(5f, 1f, 5f);
             Undo.RegisterCreatedObjectUndo(plane, "Create Ground Plane");
-            Debug.Log("[SceneSetup] Created Ground plane (10x10 units).");
-            dirty = true;
+            Debug.Log("[SceneSetup] Created Ground plane (50x50 units).");
         }
 
         if (plane.layer != groundLayer)
         {
             Undo.RecordObject(plane, "Set Ground Layer");
             plane.layer = groundLayer;
-            dirty = true;
         }
 
-        // Ensure it has a collider so raycasts can hit it.
+        // Unity Plane primitives have a MeshCollider by default — add one if missing.
         if (plane.GetComponent<Collider>() == null)
-        {
             plane.AddComponent<MeshCollider>();
-            dirty = true;
-        }
 
         // ── 3. Bake NavMesh ───────────────────────────────────────────────────
+        // NavMeshSurface must be configured with Collect Objects: All Game Objects
+        // so it picks up the plane regardless of which layer it's on.
 
         NavMeshSurface surface = Object.FindObjectOfType<NavMeshSurface>();
         if (surface == null)
         {
-            surface = new GameObject("NavMeshSurface").AddComponent<NavMeshSurface>();
-            Undo.RegisterCreatedObjectUndo(surface.gameObject, "Create NavMeshSurface");
-            dirty = true;
+            var go = new GameObject("NavMeshSurface");
+            surface = go.AddComponent<NavMeshSurface>();
+            Undo.RegisterCreatedObjectUndo(go, "Create NavMeshSurface");
         }
 
-        surface.BuildNavMesh();
+        // Explicitly configure so the surface finds all geometry.
+        surface.collectObjects = CollectObjects.All;
+        surface.useGeometry    = NavMeshCollectGeometry.PhysicsColliders;
         EditorUtility.SetDirty(surface);
-        Debug.Log("[SceneSetup] NavMesh baked.");
+
+        surface.BuildNavMesh();
+        Debug.Log("[SceneSetup] NavMesh baked successfully.");
 
         // ── 4. Wire up PlayerController layer masks ───────────────────────────
 
@@ -84,12 +86,11 @@ public static class SceneSetup
 
             so.ApplyModifiedProperties();
             EditorUtility.SetDirty(controller);
-            Debug.Log("[SceneSetup] PlayerController layer masks set.");
-            dirty = true;
+            Debug.Log("[SceneSetup] PlayerController layer masks assigned.");
         }
         else
         {
-            Debug.LogWarning("[SceneSetup] No PlayerController found in scene — add your player GameObject and run Setup Scene again.");
+            Debug.LogWarning("[SceneSetup] No PlayerController found — add your player to the scene and run Setup Scene again.");
         }
 
         // ── 5. Wire CameraController target ──────────────────────────────────
@@ -108,22 +109,16 @@ public static class SceneSetup
                     so.ApplyModifiedProperties();
                     EditorUtility.SetDirty(cam);
                     Debug.Log("[SceneSetup] CameraController target set to player.");
-                    dirty = true;
                 }
             }
         }
 
-        // ── 6. Save ───────────────────────────────────────────────────────────
+        // ── 6. Save scene so NavMesh data persists into Play mode ─────────────
+        // This is the critical step — without saving, the baked NavMesh data is
+        // lost when entering Play mode and agents throw "no valid NavMesh" errors.
 
-        if (dirty)
-        {
-            UnityEditor.SceneManagement.EditorSceneManager.MarkAllScenesDirty();
-            Debug.Log("[SceneSetup] Scene setup complete. Press Ctrl+S to save.");
-        }
-        else
-        {
-            Debug.Log("[SceneSetup] Everything already configured — nothing to do.");
-        }
+        EditorSceneManager.SaveOpenScenes();
+        Debug.Log("[SceneSetup] Scene saved. Hit Play — your player should now move.");
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -134,34 +129,38 @@ public static class SceneSetup
         int existing = LayerMask.NameToLayer(layerName);
         if (existing >= 0) return existing;
 
-        // Write into TagManager asset.
         SerializedObject tagManager = new SerializedObject(
             AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
 
         SerializedProperty layers = tagManager.FindProperty("layers");
-        for (int i = 8; i < layers.arraySize; i++) // 0-7 are built-in
+        for (int i = 8; i < layers.arraySize; i++) // slots 0-7 are built-in
         {
             SerializedProperty slot = layers.GetArrayElementAtIndex(i);
             if (string.IsNullOrEmpty(slot.stringValue))
             {
                 slot.stringValue = layerName;
                 tagManager.ApplyModifiedProperties();
-                Debug.Log($"[SceneSetup] Created layer '{layerName}' at index {i}.");
+                Debug.Log($"[SceneSetup] Created layer '{layerName}' at slot {i}.");
                 return i;
             }
         }
 
-        return -1; // No free slot.
+        return -1;
     }
 
-    /// <summary>Finds the ground plane by layer name or by the name "Ground" or "Plane".</summary>
+    /// <summary>Finds the ground plane by layer, then by name containing "ground" or "plane".</summary>
     private static GameObject FindGround()
     {
         int groundLayer = LayerMask.NameToLayer(GroundLayerName);
 
         foreach (GameObject go in Object.FindObjectsOfType<GameObject>())
         {
-            if (go.layer == groundLayer) return go;
+            if (go.layer == groundLayer && go.GetComponent<MeshRenderer>() != null)
+                return go;
+        }
+
+        foreach (GameObject go in Object.FindObjectsOfType<GameObject>())
+        {
             string n = go.name.ToLower();
             if ((n.Contains("ground") || n.Contains("plane")) && go.GetComponent<MeshRenderer>() != null)
                 return go;
